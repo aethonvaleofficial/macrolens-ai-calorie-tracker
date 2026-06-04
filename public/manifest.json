@@ -1,0 +1,25 @@
+{
+  "name": "MacroLens AI Calorie Tracker",
+  "short_name": "MacroLens",
+  "description": "Track your daily macros with AI‑assisted meal analysis.",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F5F7F5",
+  "theme_color": "#34C759",
+  "orientation": "portrait-primary",
+  "scope": ".",
+  "related_applications": [],
+  "prefer_related_applications": false
+}

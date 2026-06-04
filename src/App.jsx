@@ -872,6 +872,7 @@ export default function App() {
         {screen === "settings" && <Settings goals={goals} saveGoals={saveGoals} />}
       </div>
       <BottomNav active={screen} setActive={setScreen} />
+      <div className="credit">Crafted by Tushar Chopdar</div>
     </div>
   );
 }
