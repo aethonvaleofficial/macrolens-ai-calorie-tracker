@@ -1,0 +1,62 @@
+/* ══════════════════════════════════════════
+   MacroLens — index.css
+   Global base styles & PWA overrides
+   ══════════════════════════════════════════ */
+
+/* Smooth box model */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Remove default margins */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* Crisp, iOS-native feel */
+body {
+  font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #E8EDE8;
+  /* Prevent elastic scroll overscroll showing white */
+  overscroll-behavior: none;
+  /* Prevent text selection on tap */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+/* Root fills height for PWA */
+#root {
+  height: 100%;
+  min-height: 100dvh;
+}
+
+/* Remove input/button default styles */
+input, button, textarea, select {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Scrollbar styling (desktop) */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/* Prevent number input spinners */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] { -moz-appearance: textfield; }
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid #34C759;
+  outline-offset: 2px;
+}
