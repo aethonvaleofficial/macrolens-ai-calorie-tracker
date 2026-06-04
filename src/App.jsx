@@ -77,7 +77,12 @@ const DEFAULT_GOALS = { calories: 2000, protein: 150, carbs: 250, fat: 65 };
 // 🛠  UTILS
 // ─────────────────────────────────────────────
 
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => {
+  const d = new Date();
+  const offset = d.getTimezoneOffset();
+  const localDate = new Date(d.getTime() - offset * 60 * 1000);
+  return localDate.toISOString().split("T")[0];
+};
 
 function useDiary() {
   const [entries, setEntries] = useState(() => {
@@ -130,12 +135,29 @@ function sumMacros(entries) {
 function calcStreak(entries) {
   const days = [...new Set(entries.map((e) => e.date))].sort().reverse();
   if (!days.length) return 0;
-  let streak = 0;
-  let cursor = new Date();
-  for (const d of days) {
-    const diff = Math.round((cursor - new Date(d)) / 86400000);
-    if (diff <= 1) { streak++; cursor = new Date(d); }
-    else break;
+
+  const todayStr = today();
+  const parseDate = (dStr) => new Date(dStr + "T12:00:00");
+  const diffDays = (d1, d2) => Math.round((d1 - d2) / 86400000);
+
+  const latestDate = parseDate(days[0]);
+  const todayDate = parseDate(todayStr);
+  const diffFromToday = diffDays(todayDate, latestDate);
+
+  if (diffFromToday > 1) {
+    return 0;
+  }
+
+  let streak = 1;
+  for (let i = 0; i < days.length - 1; i++) {
+    const current = parseDate(days[i]);
+    const next = parseDate(days[i + 1]);
+    const diff = diffDays(current, next);
+    if (diff === 1) {
+      streak++;
+    } else if (diff > 1) {
+      break;
+    }
   }
   return streak;
 }
@@ -144,7 +166,9 @@ function last7Days() {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
-    return d.toISOString().split("T")[0];
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().split("T")[0];
   });
 }
 
@@ -184,10 +208,10 @@ function WeekChart({ entries, goals }) {
   const days = last7Days();
   const bars = days.map((d) => {
     const dayEntries = entries.filter((e) => e.date === d);
-    const cal = dayEntries.reduce((a, e) => a + e.calories, 0);
+    const cal = dayEntries.reduce((a, e) => a + (e.calories || 0), 0);
     return { d, cal };
   });
-  const maxCal = Math.max(...bars.map((b) => b.cal), goals.calories);
+  const maxCal = Math.max(...bars.map((b) => b.cal), goals.calories || 2000, 1);
   const dayNames = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
   return (
@@ -220,7 +244,7 @@ function WeekChart({ entries, goals }) {
 /** Calorie arc progress */
 function CalArc({ value, goal }) {
   const pct = Math.min(value / Math.max(goal, 1), 1);
-  const r = 70;
+  const r = 80; // Match SVG path radius (M10,100 A80,80)
   const circ = Math.PI * r; // half circle
   const dash = pct * circ;
   const over = value > goal;
@@ -429,13 +453,25 @@ function ScanMeal({ onAddEntry }) {
   const [mealType, setMealType] = useState("Lunch");
   const fileRef = useRef();
 
+  useEffect(() => {
+    return () => {
+      if (previewURL) {
+        URL.revokeObjectURL(previewURL);
+      }
+    };
+  }, [previewURL]);
+
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (previewURL) {
+      URL.revokeObjectURL(previewURL);
+    }
     setImage(file);
     setPreviewURL(URL.createObjectURL(file));
     setState("idle");
     setResult(null);
+    e.target.value = ""; // Allow re-upload of same file
   };
 
   const analyze = () => {
@@ -471,6 +507,9 @@ function ScanMeal({ onAddEntry }) {
   const handleAdd = () => {
     if (!result) return;
     onAddEntry({ ...result, mealType });
+    if (previewURL) {
+      URL.revokeObjectURL(previewURL);
+    }
     setImage(null);
     setPreviewURL(null);
     setResult(null);
@@ -555,9 +594,10 @@ function ScanMeal({ onAddEntry }) {
 }
 
 /** DAILY DIARY */
-function Diary({ entries, onRemove }) {
+function Diary({ entries, onRemove, goals }) {
   const te = todayEntries(entries);
   const totals = sumMacros(te);
+  const overGoal = goals && totals.calories > goals.calories;
 
   return (
     <div className="screen">
@@ -570,7 +610,7 @@ function Diary({ entries, onRemove }) {
       <div className="diary-totals-card glass-card">
         <div className="diary-total-row">
           <span className="diary-total-label">Total Calories</span>
-          <span className="diary-total-val">{totals.calories} kcal</span>
+          <span className="diary-total-val" style={{ color: overGoal ? "var(--orange)" : "var(--green)" }}>{totals.calories} kcal</span>
         </div>
         <div className="diary-macro-summary">
           <span className="dms blue">P: {totals.protein}g</span>
@@ -616,7 +656,7 @@ function History({ entries, goals }) {
   const totalWeekCal = weekData.reduce((a, b) => a + b.calories, 0);
   const avgCal = Math.round(totalWeekCal / 7);
 
-  const maxCal = Math.max(...weekData.map((b) => b.calories), goals.calories);
+  const maxCal = Math.max(...weekData.map((b) => b.calories), goals.calories || 2000, 1);
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
@@ -827,7 +867,7 @@ export default function App() {
       <div className="app-content">
         {screen === "dashboard" && <Dashboard entries={entries} goals={goals} />}
         {screen === "scan" && <ScanMeal onAddEntry={handleAddEntry} />}
-        {screen === "diary" && <Diary entries={entries} onRemove={removeEntry} />}
+        {screen === "diary" && <Diary entries={entries} onRemove={removeEntry} goals={goals} />}
         {screen === "history" && <History entries={entries} goals={goals} />}
         {screen === "settings" && <Settings goals={goals} saveGoals={saveGoals} />}
       </div>

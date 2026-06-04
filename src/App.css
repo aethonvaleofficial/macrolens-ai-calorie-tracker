@@ -627,7 +627,11 @@ input  { font-family: inherit; }
 }
 .btn-primary:active { transform: scale(0.97); box-shadow: none; }
 .btn-primary.full  { width: 100%; margin-bottom: 12px; }
-.btn-primary.saved { background: #28A745; }
+.btn-primary.saved {
+  background: #28A745;
+  box-shadow: 0 4px 20px rgba(40,167,69,0.45);
+  transform: scale(1.02);
+}
 
 .btn-secondary {
   background: var(--bg);
@@ -655,16 +659,15 @@ input  { font-family: inherit; }
   transform: translateX(-50%);
   width: 100%;
   max-width: var(--max-width);
-  height: var(--nav-height);
+  height: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
   background: rgba(255,255,255,0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(0,0,0,0.07);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-around;
-  padding: 0 8px;
-  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding: 8px 8px env(safe-area-inset-bottom, 0px);
   z-index: 100;
 }
 
