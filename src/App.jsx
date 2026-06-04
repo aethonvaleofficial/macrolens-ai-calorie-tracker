@@ -21,6 +21,27 @@ import "./App.css";
 // 🗂  MOCK DATA
 // ─────────────────────────────────────────────
 
+// Local nutrition database – common foods with macro per 100g serving
+const FOOD_DB = [
+  { name: "Rice", calories: 130, protein: 2.7, carbs: 28, fat: 0.3 },
+  { name: "Roti", calories: 250, protein: 8, carbs: 45, fat: 4 },
+  { name: "Dal", calories: 120, protein: 9, carbs: 15, fat: 2 },
+  { name: "Paneer", calories: 265, protein: 18, carbs: 6, fat: 20 },
+  { name: "Egg", calories: 155, protein: 13, carbs: 1.1, fat: 11 },
+  { name: "Banana", calories: 89, protein: 1.1, carbs: 23, fat: 0.3 },
+  { name: "Apple", calories: 52, protein: 0.3, carbs: 14, fat: 0.2 },
+  { name: "Milk", calories: 42, protein: 3.4, carbs: 5, fat: 1 },
+  { name: "Chicken", calories: 239, protein: 27, carbs: 0, fat: 14 },
+  { name: "Salad", calories: 20, protein: 1, carbs: 3, fat: 0.2 },
+  { name: "Poha", calories: 180, protein: 5, carbs: 30, fat: 5 },
+  { name: "Dosa", calories: 140, protein: 4, carbs: 20, fat: 5 },
+  { name: "Idli", calories: 80, protein: 2, carbs: 15, fat: 0.5 },
+  { name: "Burger", calories: 295, protein: 12, carbs: 30, fat: 15 },
+  { name: "Pizza", calories: 266, protein: 11, carbs: 33, fat: 10 }
+];
+
+// Mock results retained for demo mode when no food selected
+// Mock results retained for demo mode when no food selected
 const MOCK_RESULTS = [
   {
     meal: "Grilled Chicken Salad",
@@ -276,6 +297,13 @@ function CalArc({ value, goal }) {
 
 /** Nutrition result card */
 function NutritionCard({ result, onAdd, onDiscard }) {
+  const [portion, setPortion] = useState(result.baseQuantity || 100);
+  const factor = portion / (result.baseQuantity || 100);
+  const calc = (value) => Math.round(value * factor);
+  const calories = calc(result.calories);
+  const protein = calc(result.protein);
+  const carbs = calc(result.carbs);
+  const fat = calc(result.fat);
   return (
     <div className="nutrition-card animate-slide-up">
       <div className="nutrition-card-header">
@@ -286,7 +314,7 @@ function NutritionCard({ result, onAdd, onDiscard }) {
             {result.confidence}% confidence
           </span>
         </div>
-        <div className="nutrition-cal-big">{result.calories}<span>kcal</span></div>
+        <div className="nutrition-cal-big">{calories}<span>kcal</span></div>
       </div>
 
       <div className="nutrition-macros">
@@ -474,39 +502,47 @@ function ScanMeal({ onAddEntry }) {
     e.target.value = ""; // Allow re-upload of same file
   };
 
-  const analyze = () => {
-    if (!image) return;
-    setState("analyzing");
-
-    // 🤖 AI_INTEGRATION_POINT ─────────────────────────────
-    // Replace this setTimeout block with a real API call, e.g.:
-    //
-    // const base64 = await toBase64(image);
-    // const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    //   method: "POST",
-    //   headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-    //   body: JSON.stringify({
-    //     model: "gpt-4o",
-    //     messages: [{ role: "user", content: [
-    //       { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } },
-    //       { type: "text", text: "Analyze this meal. Return JSON: { meal, calories, protein, carbs, fat, confidence, notes }" }
-    //     ]}]
-    //   })
-    // });
-    // const data = await res.json();
-    // setResult(JSON.parse(data.choices[0].message.content));
-    // ─────────────────────────────────────────────────────
-
-    setTimeout(() => {
-      const r = MOCK_RESULTS[Math.floor(Math.random() * MOCK_RESULTS.length)];
-      setResult(r);
-      setState("result");
-    }, 3200);
+  // Placeholder for real AI analysis – should be called from a secure backend (e.g., serverless function)
+// This function currently uses a deterministic demo fallback based on the uploaded file name
+// and a small local nutrition database (FOOD_DB). Replace the implementation with a real
+// API call that sends the image to a vision model and returns detected foods and macros.
+async function analyzeFoodImage(imageFile) {
+  // Simple demo: try to infer food from the file name
+  const name = imageFile.name.toLowerCase();
+  const matched = FOOD_DB.find(f => name.includes(f.name.toLowerCase()));
+  const food = matched || FOOD_DB[Math.floor(Math.random() * FOOD_DB.length)];
+  // Confidence is mocked but deterministic based on name hash
+  const confidence = Math.min(99, 80 + (name.split('').reduce((c,ch)=>c+ch.charCodeAt(0),0)%20));
+  return {
+    meal: food.name,
+    calories: food.calories,
+    protein: food.protein,
+    carbs: food.carbs,
+    fat: food.fat,
+    confidence,
+    notes: "Demo mode – detection based on filename; replace with real AI results.",
+    baseQuantity: 100 // grams per serving in DB
   };
+}
 
-  const handleAdd = () => {
-    if (!result) return;
-    onAddEntry({ ...result, mealType });
+const analyze = async () => {
+  if (!image) return;
+  setState("analyzing");
+  try {
+    const r = await analyzeFoodImage(image);
+    setResult(r);
+  } catch (e) {
+    // Fallback to demo mock if AI call fails
+    const r = MOCK_RESULTS[Math.floor(Math.random() * MOCK_RESULTS.length)];
+    setResult(r);
+  }
+  setState("result");
+}
+
+  const handleAdd = (editedResult) => {
+    if (!editedResult) return;
+    // Save the edited result (portion‑adjusted macros) to diary
+    onAddEntry({ ...editedResult, mealType });
     if (previewURL) {
       URL.revokeObjectURL(previewURL);
     }
