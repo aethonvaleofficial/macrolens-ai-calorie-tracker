@@ -33,7 +33,7 @@ A premium, mobile-first PWA that uses AI vision to analyze meals and track macro
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/macrolens-ai-calorie-tracker.git
+git clone https://github.com/aethonvaleofficial/macrolens-ai-calorie-tracker.git
 cd macrolens-ai-calorie-tracker
 
 # 2. Install dependencies
@@ -85,7 +85,11 @@ macrolens-ai-calorie-tracker/
 │   ├── index.css        # Global reset
 │   └── main.jsx         # Entry point
 ├── ai-logs/             # AI conversation logs (contest requirement)
-│   └── session-01.md
+│   └── ai-logs/
+  chatgpt-planning-01.md
+  chatgpt-build-01.md
+  claude-build-01.md
+  session-01.md
 ├── index.html
 ├── vite.config.js
 ├── package.json
