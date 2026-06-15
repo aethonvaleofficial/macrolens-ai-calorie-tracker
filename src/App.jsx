@@ -450,11 +450,11 @@ function Dashboard({ entries, goals }) {
           <span className="qs-val">{te.length}</span>
           <span className="qs-label">Meals today</span>
         </div>
-        <div className="quick-stat-card">
-          <span className="qs-icon">💧</span>
-          <span className="qs-val">—</span>
-          <span className="qs-label">Water (soon)</span>
-        </div>
+<div className="quick-stat-card">
+  <span className="qs-icon">📸</span>
+  <span className="qs-val">AI</span>
+  <span className="qs-label">Food scanner</span>
+</div>
         <div className="quick-stat-card">
           <span className="qs-icon">📊</span>
           <span className="qs-val">{goals.calories - totals.calories > 0 ? goals.calories - totals.calories : 0}</span>
@@ -512,7 +512,7 @@ function ScanMeal({ onAddEntry }) {
 
 async function analyzeFoodImage(photoData) {
   return analyzeFoodPhotoWithAI(photoData);
-}
+}s
 
   const analyze = async () => {
     if (!photo) {
