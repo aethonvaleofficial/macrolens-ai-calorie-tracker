@@ -14,7 +14,8 @@
  *  a real vision API (e.g. OpenAI GPT-4o, Google Gemini Vision) can be wired in.
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+import { takeFoodPhoto, chooseFoodPhoto } from "./lib/camera";
 import "./App.css";
 
 // ─────────────────────────────────────────────
@@ -474,82 +475,87 @@ function getGreeting() {
 
 /** SCAN MEAL */
 function ScanMeal({ onAddEntry }) {
-  const [image, setImage] = useState(null);
-  const [previewURL, setPreviewURL] = useState(null);
+  const [photo, setPhoto] = useState(null);
   const [state, setState] = useState("idle"); // idle | analyzing | result
   const [result, setResult] = useState(null);
   const [mealType, setMealType] = useState("Lunch");
-  const fileRef = useRef();
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    return () => {
-      if (previewURL) {
-        URL.revokeObjectURL(previewURL);
-      }
+  const handleTakePhoto = async () => {
+    try {
+      setError("");
+      setResult(null);
+      setState("idle");
+
+      const capturedPhoto = await takeFoodPhoto();
+      setPhoto(capturedPhoto);
+    } catch (err) {
+      console.error(err);
+      setError("Camera was cancelled or could not open.");
+    }
+  };
+
+  const handleChoosePhoto = async () => {
+    try {
+      setError("");
+      setResult(null);
+      setState("idle");
+
+      const selectedPhoto = await chooseFoodPhoto();
+      setPhoto(selectedPhoto);
+    } catch (err) {
+      console.error(err);
+      setError("Gallery was cancelled or could not open.");
+    }
+  };
+
+  async function analyzeFoodImage() {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    const food = FOOD_DB[Math.floor(Math.random() * FOOD_DB.length)];
+
+    return {
+      meal: food.name,
+      calories: food.calories,
+      protein: food.protein,
+      carbs: food.carbs,
+      fat: food.fat,
+      confidence: 86,
+      notes: "Demo mode – camera scanner is working. Real Gemini AI vision will replace this estimate next.",
+      baseQuantity: 100,
     };
-  }, [previewURL]);
-
-  const handleFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (previewURL) {
-      URL.revokeObjectURL(previewURL);
-    }
-    setImage(file);
-    setPreviewURL(URL.createObjectURL(file));
-    setState("idle");
-    setResult(null);
-    e.target.value = ""; // Allow re-upload of same file
-  };
-
-  // Placeholder for real AI analysis – should be called from a secure backend (e.g., serverless function)
-// This function currently uses a deterministic demo fallback based on the uploaded file name
-// and a small local nutrition database (FOOD_DB). Replace the implementation with a real
-// API call that sends the image to a vision model and returns detected foods and macros.
-async function analyzeFoodImage(imageFile) {
-  // Simple demo: try to infer food from the file name
-  const name = imageFile.name.toLowerCase();
-  const matched = FOOD_DB.find(f => name.includes(f.name.toLowerCase()));
-  const food = matched || FOOD_DB[Math.floor(Math.random() * FOOD_DB.length)];
-  // Confidence is mocked but deterministic based on name hash
-  const confidence = Math.min(99, 80 + (name.split('').reduce((c,ch)=>c+ch.charCodeAt(0),0)%20));
-  return {
-    meal: food.name,
-    calories: food.calories,
-    protein: food.protein,
-    carbs: food.carbs,
-    fat: food.fat,
-    confidence,
-    notes: "Demo mode – detection based on filename; replace with real AI results.",
-    baseQuantity: 100 // grams per serving in DB
-  };
-}
-
-const analyze = async () => {
-  if (!image) return;
-  setState("analyzing");
-  try {
-    const r = await analyzeFoodImage(image);
-    setResult(r);
-  } catch (e) {
-    // Fallback to demo mock if AI call fails
-    const r = MOCK_RESULTS[Math.floor(Math.random() * MOCK_RESULTS.length)];
-    setResult(r);
   }
-  setState("result");
-}
 
-  const handleAdd = (editedResult) => {
-    if (!editedResult) return;
-    // Save the edited result (portion‑adjusted macros) to diary
-    onAddEntry({ ...editedResult, mealType });
-    if (previewURL) {
-      URL.revokeObjectURL(previewURL);
+  const analyze = async () => {
+    if (!photo) {
+      setError("Please take or choose a food photo first.");
+      return;
     }
-    setImage(null);
-    setPreviewURL(null);
+
+    setError("");
+    setState("analyzing");
+
+    try {
+      const r = await analyzeFoodImage(photo);
+      setResult(r);
+    } catch (e) {
+      console.error(e);
+      const r = MOCK_RESULTS[Math.floor(Math.random() * MOCK_RESULTS.length)];
+      setResult(r);
+    }
+
+    setState("result");
+  };
+
+  const handleAdd = () => {
+    if (!result) return;
+
+    onAddEntry({ ...result, mealType });
+
+    setPhoto(null);
     setResult(null);
     setState("idle");
+    setError("");
   };
 
   const handleDiscard = () => {
@@ -557,30 +563,52 @@ const analyze = async () => {
     setState("idle");
   };
 
+  const handleRetake = () => {
+    setPhoto(null);
+    setResult(null);
+    setState("idle");
+    setError("");
+  };
+
   return (
     <div className="screen">
       <div className="screen-header">
         <h2 className="screen-title">Scan Meal</h2>
-        <p className="screen-subtitle">Upload a photo to analyze nutrition</p>
+        <p className="screen-subtitle">Take a food photo or choose one from gallery</p>
       </div>
 
-      {/* Upload zone */}
-      {!previewURL ? (
-        <div className="upload-zone" onClick={() => fileRef.current.click()}>
+      {!photo ? (
+        <div className="upload-zone">
           <div className="upload-icon">📷</div>
-          <p className="upload-title">Tap to upload a photo</p>
-          <p className="upload-sub">JPG, PNG or HEIC supported</p>
-          <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} hidden />
+          <p className="upload-title">Scan your meal</p>
+          <p className="upload-sub">Use your camera for best results</p>
+
+          <button className="btn-primary full" type="button" onClick={handleTakePhoto}>
+            📸 Take Food Photo
+          </button>
+
+          <button className="btn-secondary full" type="button" onClick={handleChoosePhoto}>
+            🖼️ Choose from Gallery
+          </button>
         </div>
       ) : (
         <div className="preview-wrap">
-          <img src={previewURL} alt="Meal preview" className="preview-img" />
-          <button className="preview-change" onClick={() => fileRef.current.click()}>Change Photo</button>
-          <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} hidden />
+          <img src={photo.previewUrl} alt="Meal preview" className="preview-img" />
+
+          <div className="nutrition-card-actions">
+            <button className="btn-secondary" type="button" onClick={handleRetake}>
+              Retake
+            </button>
+
+            <button className="btn-secondary" type="button" onClick={handleChoosePhoto}>
+              Gallery
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Meal type selector */}
+      {error && <p className="scanner-error">{error}</p>}
+
       <div className="meal-type-row">
         {MEAL_TYPES.map((t) => (
           <button
@@ -593,23 +621,23 @@ const analyze = async () => {
         ))}
       </div>
 
-      {/* Analyze button */}
-      {state === "idle" && previewURL && (
+      {state === "idle" && photo && (
         <button className="btn-primary full" onClick={analyze}>
           🔍 Analyze Meal
         </button>
       )}
 
-      {/* Analyzing animation */}
       {state === "analyzing" && (
         <div className="analyzing-card animate-slide-up">
           <div className="analyzing-spinner">
             <div className="spinner-ring" />
             <span className="spinner-emoji">🧠</span>
           </div>
+
           <p className="analyzing-title">Analyzing your meal…</p>
+
           <div className="analyzing-steps">
-            {["Detecting ingredients", "Estimating portions", "Calculating macros"].map((s, i) => (
+            {["Reading food photo", "Estimating portion", "Calculating macros"].map((s, i) => (
               <div className="analyzing-step" key={s} style={{ animationDelay: `${i * 0.6}s` }}>
                 <span className="step-dot" />
                 <span>{s}</span>
@@ -619,7 +647,6 @@ const analyze = async () => {
         </div>
       )}
 
-      {/* Result */}
       {state === "result" && result && (
         <NutritionCard result={result} onAdd={handleAdd} onDiscard={handleDiscard} />
       )}
