@@ -16,6 +16,7 @@
 
 import { useState } from "react";
 import { takeFoodPhoto, chooseFoodPhoto } from "./lib/camera";
+import { analyzeFoodPhotoWithAI } from "./lib/foodVision";
 import "./App.css";
 
 // ─────────────────────────────────────────────
@@ -509,22 +510,9 @@ function ScanMeal({ onAddEntry }) {
     }
   };
 
-  async function analyzeFoodImage() {
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    const food = FOOD_DB[Math.floor(Math.random() * FOOD_DB.length)];
-
-    return {
-      meal: food.name,
-      calories: food.calories,
-      protein: food.protein,
-      carbs: food.carbs,
-      fat: food.fat,
-      confidence: 86,
-      notes: "Demo mode – camera scanner is working. Real Gemini AI vision will replace this estimate next.",
-      baseQuantity: 100,
-    };
-  }
+async function analyzeFoodImage(photoData) {
+  return analyzeFoodPhotoWithAI(photoData);
+}
 
   const analyze = async () => {
     if (!photo) {
